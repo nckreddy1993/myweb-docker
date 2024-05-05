@@ -1,4 +1,4 @@
-pipeline{
+   pipeline{
     agent any
      tools {
         maven 'Maven-3.6.1'
@@ -8,52 +8,35 @@ pipeline{
         PATH = "/opt/maven3/bin:$PATH"
     }
     stages{
-        stage("Git Checkout"){
+        stage("GIT CLONE"){
             steps{
-                git credentialsId: 'GIT_CRED', url: 'https://github.com/nckreddy1993/myweb.git'
+                git credentialsId: 'GIT_CRED', url: 'https://github.com/nckreddy1993/myweb-docker.git'
             }
         }
-        stage("Maven Build"){
+        stage("BUILD WITH MAVEN"){
             steps{
                 sh "mvn clean sonar:sonar package"
-                
             }
         }
-        stage('Upload War To Nexus'){
+        stage("UPLOAD TO NEXUS"){
             steps{
-                  nexusArtifactUploader artifacts: [
-                       [
-                            artifactId: 'myweb', 
-                            classifier: '', 
-                            file: "target/myweb-8.2.0.war", 
-                            type: 'war'
-                       ]
-                  ], 
-                  credentialsId: 'NEXUS_CRED', 
-                  groupId: 'in.javahome', 
-                  nexusUrl: '54.168.152.197:8081', 
-                  nexusVersion: 'nexus3', 
-                  protocol: 'http', 
-                  repository: 'sample-releases', 
-                  version: '8.2.0'  
-              }
+                nexusArtifactUploader artifacts: [[artifactId: 'myweb-docker', classifier: '', file: 'target/myweb-docker-8.2.0.war', type: 'war']], credentialsId: 'NEXUS_CRED', groupId: 'javahome', nexusUrl: '172.31.23.85:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'gana', version: '8.2.0'
             }
-        stage('Build Docker Image'){
-            steps{
-                 sh 'docker build -t chandradev24/spring-boot-mongo .'
-                 sh 'docker build -t tomcat:${BUILD_NUMBER} .'
-                 sh 'docker run -itd --name chandra31 -p 1234:8080 tomcat:${BUILD_NUMBER}'
-             }
-         }
-        stage('Push Docker Image'){
-             steps{
-                  withCredentials([string(credentialsId: 'DOCKER_HUB_CREDENTIALS', variable: 'DOCKER_HUB_CREDENTIALS')]) {
-                      sh "docker login -u chandradev24 -p ${DOCKER_HUB_CREDENTIALS}"
-            }
-            sh 'docker push chandradev24/spring-boot-mongo'
         }
-      }
-        
-        
+        stage("DOCKER BUILD"){
+            steps{
+                sh "docker build -t chandradev24/ecommerce-website ."
+                sh "docker build -t tomcat:${BUILD_NUMBER} ."
+                sh "docker run -itd --name ecom-website6 -p 6666:8080 tomcat:${BUILD_NUMBER}"
+            }
+        }
+        stage("DOCKER PUSH"){
+            steps{
+              withCredentials([string(credentialsId: 'DOCKER_HUB_CRED', variable: 'DOCKER_HUB_CRED')]) {  
+                sh "docker login -u chandradev24 -p ${DOCKER_HUB_CRED}"
+            }
+                sh "docker push chandradev24/ecommerce-website"
+                }
+            }
     }
 }
